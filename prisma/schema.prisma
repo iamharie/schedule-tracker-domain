@@ -26,8 +26,9 @@ model User {
   createdAt    DateTime @default(now()) @map("created_at")
   updatedAt    DateTime @updatedAt @map("updated_at")
 
-  verificationTokens VerificationToken[]
-  calendars          Calendar[]
+  verificationTokens  VerificationToken[]
+  passwordResetTokens PasswordResetToken[]
+  calendars           Calendar[]
 
   @@map("users")
   @@schema("schedule_tracker")
@@ -46,6 +47,22 @@ model VerificationToken {
   @@index([userId])
   @@index([tokenHash])
   @@map("verification_tokens")
+  @@schema("schedule_tracker")
+}
+
+model PasswordResetToken {
+  id         String    @id @default(uuid())
+  userId     String    @map("user_id")
+  tokenHash  String    @map("token_hash")
+  expiresAt  DateTime  @map("expires_at")
+  consumedAt DateTime? @map("consumed_at")
+  createdAt  DateTime  @default(now()) @map("created_at")
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([tokenHash])
+  @@map("password_reset_tokens")
   @@schema("schedule_tracker")
 }
 
