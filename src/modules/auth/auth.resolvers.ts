@@ -58,5 +58,15 @@ export const authResolvers = {
       _parent: unknown,
       args: { email: string },
     ) => authService.resendVerification(args.email),
+
+    requestPasswordReset: async (
+      _parent: unknown,
+      args: { email: string },
+    ) => authService.requestPasswordReset(args.email),
+
+    resetPassword: async (
+      _parent: unknown,
+      args: { token: string; newPassword: string },
+    ) => authService.resetPassword(args.token, args.newPassword),
   },
 };

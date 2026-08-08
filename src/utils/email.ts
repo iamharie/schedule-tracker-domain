@@ -56,3 +56,20 @@ export async function sendVerificationEmail(
     `,
   });
 }
+
+export async function sendPasswordResetEmail(
+  email: string,
+  rawToken: string,
+): Promise<void> {
+  const link = `${env.appUrl}/reset-password?token=${rawToken}`;
+  await emailService.send({
+    to: email,
+    subject: 'Reset your password — Schedule Tracker',
+    text: `Reset your password by clicking this link:\n${link}\n\nThis link expires in 1 hour. If you didn't request this, you can ignore this email.`,
+    html: `
+      <p>We received a request to reset your Schedule Tracker password.</p>
+      <p><a href="${link}">Reset your password</a></p>
+      <p>This link expires in 1 hour. If you didn't request this, you can ignore this email.</p>
+    `,
+  });
+}

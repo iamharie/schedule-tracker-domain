@@ -17,4 +17,6 @@ type Mutation {
   resendVerification(email: String!): Boolean!
   login(email: String!, password: String!): User!
   logout: Boolean!
+  requestPasswordReset(email: String!): Boolean!
+  resetPassword(token: String!, newPassword: String!): Boolean!
 }

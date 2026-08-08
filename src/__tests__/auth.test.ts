@@ -13,6 +13,7 @@ const PASSWORD = 'ValidPass123';
 let httpServer: Server;
 let request: ReturnType<typeof supertest>;
 let capturedToken = '';
+let capturedResetToken = '';
 
 const gql = (query: string, variables?: Record<string, unknown>) => ({
   query,
@@ -24,6 +25,11 @@ beforeAll(async () => {
   vi.spyOn(emailUtils, 'sendVerificationEmail').mockImplementation(
     async (_email, rawToken) => {
       capturedToken = rawToken;
+    },
+  );
+  vi.spyOn(emailUtils, 'sendPasswordResetEmail').mockImplementation(
+    async (_email, rawToken) => {
+      capturedResetToken = rawToken;
     },
   );
 
@@ -137,5 +143,87 @@ describe('me query', () => {
       .post('/graphql')
       .send(gql('query { me { id } }'));
     expect(res.body.data?.me).toBeNull();
+  });
+});
+
+describe('requestPasswordReset', () => {
+  it('returns true and does not leak whether the email is registered', async () => {
+    const res = await request
+      .post('/graphql')
+      .send(gql('mutation { requestPasswordReset(email: "no-such-user@example.com") }'));
+    expect(res.body.errors).toBeUndefined();
+    expect(res.body.data?.requestPasswordReset).toBe(true);
+  });
+
+  it('returns true and issues a reset token for a real user', async () => {
+    const res = await request
+      .post('/graphql')
+      .send(gql(`mutation { requestPasswordReset(email: "${EMAIL}") }`));
+    expect(res.body.errors).toBeUndefined();
+    expect(res.body.data?.requestPasswordReset).toBe(true);
+    expect(capturedResetToken).toBeTruthy();
+  });
+});
+
+describe('resetPassword', () => {
+  const NEW_PASSWORD = 'BrandNewPass456';
+
+  it('rejects an invalid token', async () => {
+    const res = await request
+      .post('/graphql')
+      .send(gql('mutation { resetPassword(token: "badtoken", newPassword: "BrandNewPass456") }'));
+    expect(res.body.errors?.[0]?.extensions?.code).toBe('INVALID_TOKEN');
+  });
+
+  it('rejects a short new password', async () => {
+    const res = await request
+      .post('/graphql')
+      .send(
+        gql(
+          `mutation { resetPassword(token: "${capturedResetToken}", newPassword: "short") }`,
+        ),
+      );
+    expect(res.body.errors?.[0]?.extensions?.code).toBe('VALIDATION_ERROR');
+  });
+
+  it('succeeds with the captured token', async () => {
+    expect(capturedResetToken).toBeTruthy();
+    const res = await request
+      .post('/graphql')
+      .send(
+        gql(
+          `mutation { resetPassword(token: "${capturedResetToken}", newPassword: "${NEW_PASSWORD}") }`,
+        ),
+      );
+    expect(res.body.errors).toBeUndefined();
+    expect(res.body.data?.resetPassword).toBe(true);
+  });
+
+  it('rejects the same token a second time (consumed)', async () => {
+    const res = await request
+      .post('/graphql')
+      .send(
+        gql(
+          `mutation { resetPassword(token: "${capturedResetToken}", newPassword: "AnotherPass789") }`,
+        ),
+      );
+    expect(res.body.errors?.[0]?.extensions?.code).toBe('INVALID_TOKEN');
+  });
+
+  it('logs in with the new password', async () => {
+    const res = await request
+      .post('/graphql')
+      .send(
+        gql(`mutation { login(email: "${EMAIL}", password: "${NEW_PASSWORD}") { id email } }`),
+      );
+    expect(res.body.errors).toBeUndefined();
+    expect(res.body.data?.login?.email).toBe(EMAIL);
+  });
+
+  it('rejects the old password', async () => {
+    const res = await request
+      .post('/graphql')
+      .send(gql(`mutation { login(email: "${EMAIL}", password: "${PASSWORD}") { id } }`));
+    expect(res.body.errors?.[0]?.extensions?.code).toBe('INVALID_CREDENTIALS');
   });
 });
