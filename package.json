@@ -2,10 +2,14 @@
   "name": "schedule-tracker-domain",
   "version": "0.0.1",
   "main": "dist/index.js",
+  "engines": {
+    "node": ">=20.0.0"
+  },
   "scripts": {
     "dev": "ts-node-dev --respawn --transpile-only src/index.ts",
     "build": "tsc && node scripts/copy-graphql.js",
     "start": "node dist/index.js",
+    "railway:start": "npx prisma migrate deploy && node dist/index.js",
     "schema:export": "ts-node-dev --transpile-only scripts/export-schema.ts",
     "db:generate": "prisma generate",
     "db:migrate": "prisma migrate dev",
