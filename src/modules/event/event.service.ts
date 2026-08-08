@@ -405,6 +405,7 @@ export async function reorderEvent(
   id: string,
   afterId?: string | null,
   beforeId?: string | null,
+  startsAt?: Date,
 ): Promise<ExpandedEvent[]> {
   const eventMeta = await assertOwnsEvent(userId, id);
 
@@ -415,11 +416,21 @@ export async function reorderEvent(
 
   const newSortOrder = generateKeyBetween(after?.sortOrder ?? null, before?.sortOrder ?? null);
 
-  await prisma.event.update({ where: { id }, data: { sortOrder: newSortOrder } });
+  // `startsAt`, when provided, moves the event to a different day (e.g. a
+  // month-view drop on another day) — the client computes the correct local
+  // instant, same as quick-create does. Sort order and the day move land in
+  // one write so a cross-day drag can never be seen mid-move with a stale
+  // sort key before the reorder "catches up".
+  const newStartsAt = startsAt ?? eventMeta.startsAt;
+
+  await prisma.event.update({
+    where: { id },
+    data: { sortOrder: newSortOrder, startsAt: newStartsAt },
+  });
 
   // Return all events for the same calendar-day so the client can reconcile
-  const dayStart = utcDayStart(eventMeta.startsAt);
-  const dayEnd = utcDayEnd(eventMeta.startsAt);
+  const dayStart = utcDayStart(newStartsAt);
+  const dayEnd = utcDayEnd(newStartsAt);
   const dayEvents = await prisma.event.findMany({
     where: { calendarId: eventMeta.calendarId, startsAt: { gte: dayStart, lt: dayEnd } },
   });

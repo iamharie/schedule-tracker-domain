@@ -102,11 +102,11 @@ export const eventResolvers = {
     },
     reorderEvent(
       _: unknown,
-      { id, afterId, beforeId }: { id: string; afterId?: string; beforeId?: string },
+      { id, afterId, beforeId, startsAt }: { id: string; afterId?: string; beforeId?: string; startsAt?: string },
       ctx: AppContext,
     ) {
       const userId = requireAuth(ctx);
-      return eventService.reorderEvent(userId, id, afterId, beforeId);
+      return eventService.reorderEvent(userId, id, afterId, beforeId, startsAt ? new Date(startsAt) : undefined);
     },
     toggleEventComplete(_: unknown, { id }: { id: string }, ctx: AppContext) {
       const userId = requireAuth(ctx);
