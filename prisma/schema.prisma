@@ -9,6 +9,14 @@ datasource db {
   schemas  = ["schedule_tracker"]
 }
 
+enum Priority {
+  HIGH
+  MEDIUM
+  NICE_TO_DO
+
+  @@schema("schedule_tracker")
+}
+
 model User {
   id           String   @id @default(uuid())
   email        String   @unique
@@ -19,6 +27,7 @@ model User {
   updatedAt    DateTime @updatedAt @map("updated_at")
 
   verificationTokens VerificationToken[]
+  calendars          Calendar[]
 
   @@map("users")
   @@schema("schedule_tracker")
@@ -37,5 +46,68 @@ model VerificationToken {
   @@index([userId])
   @@index([tokenHash])
   @@map("verification_tokens")
+  @@schema("schedule_tracker")
+}
+
+model Calendar {
+  id        String   @id @default(uuid())
+  userId    String   @map("user_id")
+  name      String
+  color     String   @default("#4F46E5")
+  isDefault Boolean  @default(false) @map("is_default")
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  user   User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+  events Event[]
+
+  @@index([userId])
+  @@map("calendars")
+  @@schema("schedule_tracker")
+}
+
+model Event {
+  id              String    @id @default(uuid())
+  calendarId      String    @map("calendar_id")
+  title           String
+  notes           String?
+  location        String?
+  startsAt        DateTime  @map("starts_at") @db.Timestamptz
+  durationMinutes Int       @default(30) @map("duration_minutes")
+  allDay          Boolean   @default(false) @map("all_day")
+  priority        Priority  @default(MEDIUM)
+  isAnchored      Boolean   @default(false) @map("is_anchored")
+  sortOrder       String    @map("sort_order")
+  rrule           String?
+  completedAt     DateTime? @map("completed_at") @db.Timestamptz
+  createdAt       DateTime  @default(now()) @map("created_at")
+  updatedAt       DateTime  @updatedAt @map("updated_at")
+
+  calendar   Calendar         @relation(fields: [calendarId], references: [id], onDelete: Cascade)
+  exceptions EventException[]
+
+  @@index([calendarId, startsAt])
+  @@map("events")
+  @@schema("schedule_tracker")
+}
+
+model EventException {
+  id              String    @id @default(uuid())
+  eventId         String    @map("event_id")
+  originalDate    DateTime  @map("original_date") @db.Timestamptz
+  isDeleted       Boolean   @default(false) @map("is_deleted")
+  title           String?
+  notes           String?
+  location        String?
+  startsAt        DateTime? @map("starts_at") @db.Timestamptz
+  durationMinutes Int?      @map("duration_minutes")
+  priority        Priority?
+  createdAt       DateTime  @default(now()) @map("created_at")
+  updatedAt       DateTime  @updatedAt @map("updated_at")
+
+  event Event @relation(fields: [eventId], references: [id], onDelete: Cascade)
+
+  @@unique([eventId, originalDate])
+  @@map("event_exceptions")
   @@schema("schedule_tracker")
 }

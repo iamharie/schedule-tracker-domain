@@ -1,0 +1,112 @@
+enum Priority {
+  HIGH
+  MEDIUM
+  NICE_TO_DO
+}
+
+enum RecurrenceScope {
+  THIS_EVENT
+  THIS_AND_FUTURE
+  ALL_EVENTS
+}
+
+type Calendar {
+  id: ID!
+  name: String!
+  color: String!
+  isDefault: Boolean!
+  createdAt: DateTime!
+  updatedAt: DateTime!
+}
+
+type Event {
+  id: ID!
+  calendarId: ID!
+  title: String!
+  notes: String
+  location: String
+  startsAt: DateTime!
+  computedStartsAt: DateTime!
+  durationMinutes: Int!
+  allDay: Boolean!
+  priority: Priority!
+  isAnchored: Boolean!
+  sortOrder: String!
+  rrule: String
+  completedAt: DateTime
+  createdAt: DateTime!
+  updatedAt: DateTime!
+  isOccurrence: Boolean!
+  originalEventId: ID
+  occurrenceDate: DateTime
+}
+
+input CreateCalendarInput {
+  name: String!
+  color: String
+  isDefault: Boolean
+}
+
+input UpdateCalendarInput {
+  name: String
+  color: String
+  isDefault: Boolean
+}
+
+input CreateEventInput {
+  calendarId: ID!
+  title: String!
+  notes: String
+  location: String
+  startsAt: DateTime!
+  durationMinutes: Int
+  allDay: Boolean
+  priority: Priority
+  isAnchored: Boolean
+  rrule: String
+  afterId: ID
+  beforeId: ID
+}
+
+input UpdateEventInput {
+  calendarId: ID
+  title: String
+  notes: String
+  location: String
+  startsAt: DateTime
+  durationMinutes: Int
+  allDay: Boolean
+  priority: Priority
+  isAnchored: Boolean
+  rrule: String
+  completedAt: DateTime
+}
+
+input QuickCreateEventInput {
+  title: String!
+  date: DateTime!
+  calendarId: ID
+  durationMinutes: Int
+  priority: Priority
+  isAnchored: Boolean
+  startsAt: DateTime
+}
+
+extend type Query {
+  calendars: [Calendar!]!
+  events(start: DateTime!, end: DateTime!, calendarIds: [ID!]): [Event!]!
+}
+
+extend type Mutation {
+  createCalendar(input: CreateCalendarInput!): Calendar!
+  updateCalendar(id: ID!, input: UpdateCalendarInput!): Calendar!
+  deleteCalendar(id: ID!): Boolean!
+
+  createEvent(input: CreateEventInput!): Event!
+  updateEvent(id: ID!, input: UpdateEventInput!, occurrenceDate: DateTime, scope: RecurrenceScope): Event!
+  deleteEvent(id: ID!, occurrenceDate: DateTime, scope: RecurrenceScope): Boolean!
+
+  quickCreateEvent(input: QuickCreateEventInput!): Event!
+  reorderEvent(id: ID!, afterId: ID, beforeId: ID): [Event!]!
+  toggleEventComplete(id: ID!): Event!
+}

@@ -28,6 +28,7 @@
     "jsonwebtoken": "^9.0.3",
     "pg": "^8.13.0",
     "resend": "^6.8.0",
+    "rrule": "^2.8.1",
     "zod": "^3.23.0"
   },
   "overrides": {
