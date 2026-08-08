@@ -44,7 +44,7 @@ export async function sendVerificationEmail(
   email: string,
   rawToken: string,
 ): Promise<void> {
-  const link = `${env.appUrl}/verify?token=${rawToken}`;
+  const link = `${env.appUrl}/verify-email?token=${rawToken}`;
   await emailService.send({
     to: email,
     subject: 'Verify your email — Schedule Tracker',
