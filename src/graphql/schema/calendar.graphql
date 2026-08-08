@@ -107,6 +107,6 @@ extend type Mutation {
   deleteEvent(id: ID!, occurrenceDate: DateTime, scope: RecurrenceScope): Boolean!
 
   quickCreateEvent(input: QuickCreateEventInput!): Event!
-  reorderEvent(id: ID!, afterId: ID, beforeId: ID): [Event!]!
+  reorderEvent(id: ID!, afterId: ID, beforeId: ID, startsAt: DateTime): [Event!]!
   toggleEventComplete(id: ID!): Event!
 }
