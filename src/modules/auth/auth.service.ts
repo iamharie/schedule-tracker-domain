@@ -61,6 +61,9 @@ export async function register(email: string, password: string): Promise<true> {
       verificationTokens: {
         create: { tokenHash, expiresAt: tokenExpiry() },
       },
+      calendars: {
+        create: { name: 'Personal', color: '#4F46E5', isDefault: true },
+      },
     },
   });
 
