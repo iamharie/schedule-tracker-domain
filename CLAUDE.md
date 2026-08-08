@@ -70,3 +70,11 @@ npm run dev          # ts-node-dev with hot reload
 npm run build        # tsc + copy SDL files to dist/
 npm start            # run compiled output
 ```
+
+## Deployment
+
+Railway, connected to this repo's `main` branch — deploys automatically on push. `railway.json` sets the start command to `npm run railway:start`, which runs `prisma migrate deploy` before `node dist/index.js` on every boot, so schema changes ship automatically with the code that needs them (no separate manual migration step).
+
+`DATABASE_URL` must be a Railway variable **reference** (`${{Postgres.DATABASE_URL}}`) to the project's Postgres plugin, not a pasted connection string — see README for the exact steps. `CORS_ORIGIN` and `APP_URL` must point at the deployed frontend's real origin for cookies/CORS and email links to work; `NODE_ENV=production` must be set for `cookieOptions()` in `src/utils/auth.ts` to switch to `SameSite=None; Secure`, which cross-origin cookie auth requires.
+
+Full production checklist and the stray-migrations caveat are in the README.
