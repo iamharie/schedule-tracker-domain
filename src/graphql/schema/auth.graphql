@@ -1,0 +1,20 @@
+type User {
+  id: ID!
+  email: String!
+  timezone: String!
+  isVerified: Boolean!
+  createdAt: DateTime!
+  updatedAt: DateTime!
+}
+
+type Query {
+  me: User
+}
+
+type Mutation {
+  register(email: String!, password: String!): Boolean!
+  verifyEmail(token: String!): User!
+  resendVerification(email: String!): Boolean!
+  login(email: String!, password: String!): User!
+  logout: Boolean!
+}

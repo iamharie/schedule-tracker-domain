@@ -6,9 +6,36 @@ generator client {
 datasource db {
   provider = "postgresql"
   url      = env("DATABASE_URL")
-  schemas  = ["public", "schedule_tracker"]
+  schemas  = ["schedule_tracker"]
 }
 
-// Models added in Phase 2 (auth) and Phase 3 (calendars/events).
-// All schedule-tracker models will use @@schema("schedule_tracker") to stay
-// isolated from the staystrong-backend tables in the public schema.
+model User {
+  id           String   @id @default(uuid())
+  email        String   @unique
+  passwordHash String   @map("password_hash")
+  isVerified   Boolean  @default(false) @map("is_verified")
+  timezone     String   @default("UTC")
+  createdAt    DateTime @default(now()) @map("created_at")
+  updatedAt    DateTime @updatedAt @map("updated_at")
+
+  verificationTokens VerificationToken[]
+
+  @@map("users")
+  @@schema("schedule_tracker")
+}
+
+model VerificationToken {
+  id         String    @id @default(uuid())
+  userId     String    @map("user_id")
+  tokenHash  String    @map("token_hash")
+  expiresAt  DateTime  @map("expires_at")
+  consumedAt DateTime? @map("consumed_at")
+  createdAt  DateTime  @default(now()) @map("created_at")
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([tokenHash])
+  @@map("verification_tokens")
+  @@schema("schedule_tracker")
+}
