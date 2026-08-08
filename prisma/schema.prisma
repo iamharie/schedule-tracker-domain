@@ -1,0 +1,14 @@
+generator client {
+  provider        = "prisma-client-js"
+  previewFeatures = ["multiSchema"]
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+  schemas  = ["public", "schedule_tracker"]
+}
+
+// Models added in Phase 2 (auth) and Phase 3 (calendars/events).
+// All schedule-tracker models will use @@schema("schedule_tracker") to stay
+// isolated from the staystrong-backend tables in the public schema.
