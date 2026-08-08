@@ -8,6 +8,7 @@ import { ApolloServerPluginDrainHttpServer } from '@apollo/server/plugin/drainHt
 import { typeDefs } from './graphql/typeDefs';
 import { resolvers } from './graphql/resolvers';
 import { env } from './config/env';
+import { resolveUserId } from './utils/auth';
 import type { AppContext } from './graphql/context';
 
 export async function createApp(): Promise<{
@@ -34,7 +35,10 @@ export async function createApp(): Promise<{
     express.json(),
     cookieParser(),
     expressMiddleware(server, {
-      context: async ({ req, res }): Promise<AppContext> => ({ req, res }),
+      context: async ({ req, res }): Promise<AppContext> => {
+        const userId = await resolveUserId(req, res);
+        return { req, res, userId };
+      },
     }),
   );
 
