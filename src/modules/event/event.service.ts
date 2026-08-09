@@ -31,12 +31,29 @@ async function assertOwnsCalendar(userId: string, calendarId: string) {
   if (!cal) throw new GraphQLError('Calendar not found', { extensions: { code: 'NOT_FOUND' } });
 }
 
-/** Derive sort_order for a new event — append to end of its calendar-day, or use given neighbours. */
+/**
+ * Derive sort_order for a new event — append to end of its calendar-day, or
+ * use given neighbours.
+ *
+ * `dayAnchor`, when provided, is used instead of `startsAt` to pick the day
+ * bucket. This matters because "day" here is bucketed by UTC calendar date,
+ * but `startsAt` is a precise instant — for a user ahead of UTC (e.g. IST),
+ * a fixed-time event set for e.g. 12:30 AM local can have a UTC date that's
+ * one day *earlier* than the local day the user actually picked. Without an
+ * explicit anchor, such an event gets appended among the WRONG day's
+ * siblings (typically "today", since that's what's usually populated) —
+ * harmless when that day has no events yet (far-future dates), but producing
+ * a bad sortOrder relative to today's real events otherwise. `dayAnchor`
+ * should be an unambiguous calendar-day value the client already computed
+ * from local time (see quickCreateEvent's `date` field), not derived from a
+ * UTC slice of an instant.
+ */
 async function resolveSortOrder(
   calendarId: string,
   startsAt: Date,
   afterId?: string | null,
   beforeId?: string | null,
+  dayAnchor?: Date | null,
 ): Promise<string> {
   if (afterId || beforeId) {
     const [after, before] = await Promise.all([
@@ -51,8 +68,8 @@ async function resolveSortOrder(
   }
 
   // Append after the last event on this calendar-day (UTC)
-  const dayStart = utcDayStart(startsAt);
-  const dayEnd = utcDayEnd(startsAt);
+  const dayStart = utcDayStart(dayAnchor ?? startsAt);
+  const dayEnd = utcDayEnd(dayAnchor ?? startsAt);
   const last = await prisma.event.findFirst({
     where: { calendarId, startsAt: { gte: dayStart, lt: dayEnd } },
     orderBy: { sortOrder: 'desc' },
@@ -69,11 +86,16 @@ function utcDayEnd(d: Date): Date {
   return new Date(Date.UTC(d.getUTCFullYear(), d.getUTCMonth(), d.getUTCDate() + 1));
 }
 
-/** Fetch a single event and annotate it with computedStartsAt from its day-sequence. */
-async function eventWithComputed(eventId: string): Promise<ExpandedEvent> {
+/**
+ * Fetch a single event and annotate it with computedStartsAt from its
+ * day-sequence. `dayAnchor` overrides which UTC day-bucket to pull siblings
+ * from — see resolveSortOrder's comment for why this can differ from a UTC
+ * slice of the event's own `startsAt`.
+ */
+async function eventWithComputed(eventId: string, dayAnchor?: Date | null): Promise<ExpandedEvent> {
   const event = await prisma.event.findUniqueOrThrow({ where: { id: eventId } });
-  const dayStart = utcDayStart(event.startsAt);
-  const dayEnd = utcDayEnd(event.startsAt);
+  const dayStart = utcDayStart(dayAnchor ?? event.startsAt);
+  const dayEnd = utcDayEnd(dayAnchor ?? event.startsAt);
 
   const dayEvents = await prisma.event.findMany({
     where: { calendarId: event.calendarId, startsAt: { gte: dayStart, lt: dayEnd } },
@@ -153,6 +175,9 @@ export async function createEvent(
     rrule?: string | null;
     afterId?: string | null;
     beforeId?: string | null;
+    // Unambiguous intended calendar day, when the caller has one (quick
+    // create does) — see resolveSortOrder's comment.
+    dayAnchor?: Date | null;
   },
 ): Promise<ExpandedEvent> {
   await assertOwnsCalendar(userId, input.calendarId);
@@ -162,6 +187,7 @@ export async function createEvent(
     input.startsAt,
     input.afterId,
     input.beforeId,
+    input.dayAnchor,
   );
 
   const event = await prisma.event.create({
@@ -180,7 +206,7 @@ export async function createEvent(
     },
   });
 
-  return eventWithComputed(event.id);
+  return eventWithComputed(event.id, input.dayAnchor);
 }
 
 export async function updateEvent(
@@ -397,6 +423,10 @@ export async function quickCreateEvent(
     durationMinutes: input.durationMinutes,
     priority: input.priority,
     isAnchored: input.isAnchored,
+    // `date` is the day the client's UI actually shows this event under,
+    // computed from local time — always prefer it over deriving the day
+    // from `startsAt`'s UTC slice, which can disagree by one day.
+    dayAnchor: input.date,
   });
 }
 
