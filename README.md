@@ -1,6 +1,6 @@
 # schedule-tracker-domain
 
-GraphQL API server for Schedule Tracker — a mobile-first calendar web app.
+GraphQL API server for Schedule Tracker — a mobile-first calendar web app. Pairs with the `schedule-tracker-ui` frontend repo; never a monorepo.
 
 ## Stack
 
@@ -8,6 +8,12 @@ GraphQL API server for Schedule Tracker — a mobile-first calendar web app.
 - Apollo Server 4 (GraphQL, schema-first SDL)
 - Prisma 5 (PostgreSQL, `schedule_tracker` schema)
 - TypeScript (strict)
+
+## What this API does
+
+- Auth: register/verify-email/login/logout/password-reset, JWT httpOnly cookies (see CLAUDE.md)
+- Calendars: CRUD, per-calendar color and default flag
+- Events: create/update/delete, anchored (fixed-time) vs. flexible (auto-cascading) scheduling, drag-reorder via fractional-index `sortOrder`, recurrence (rrule) with per-occurrence exceptions — see CLAUDE.md's "Event scheduling model" for the mechanics, which are the most important thing to understand before changing event code
 
 ## Running locally
 
@@ -33,9 +39,11 @@ Health check: `GET http://localhost:4000/health`
 ```bash
 npm run build          # Compile TypeScript + copy SDL files to dist/
 npm start              # Run compiled output
-npm run schema:export  # Write schema.graphql at repo root (for UI codegen)
+npm test               # Vitest — 50 tests, real DB (see CLAUDE.md "Testing")
 npx prisma studio      # Browse the database
 ```
+
+Note: `npm run schema:export` exists in `package.json` but is currently broken (`scripts/export-schema.ts` doesn't exist) — don't rely on it. The UI repo's codegen introspects this server live instead; see its CLAUDE.md.
 
 ## Environment variables
 
